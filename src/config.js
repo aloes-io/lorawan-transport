@@ -1,5 +1,5 @@
 import EventEmitter from 'events';
-import logger from './logger';
+import logger from './services/logger';
 
 export const appConfig = new EventEmitter();
 
@@ -22,7 +22,10 @@ appConfig.on('init', envVariables => {
       // reschedulePings: true,
     },
     lorawan: {
-      port: Number(envVariables.LORA_SERVER_PORT),
+      //  port: Number(envVariables.LORA_SERVER_PORT),
+      portup: Number(envVariables.LORA_SERVER_PORT_UP),
+      portdown: Number(envVariables.LORA_SERVER_PORT_DOWN),
+      address: envVariables.LORA_SERVER_HOST,
     },
   };
 

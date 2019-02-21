@@ -1,13 +1,16 @@
 # Aloes - LoraWan Transport
 
+- Decrypt and encrypt Lora packet
 - Authentification by OTAA and ABP via Aloes device-manager
 - MQTT flow triggered by LoraWan server events
-- Decode Lora payload
+- Decode payload received/sent with CayenneLPP
 
 
-REST API Server build upon :
+LoraWan MQTT API build upon :
 - [NodeJS](https://nodejs.org/en/)
 - [LoraWAN Server](https://github.com/ioberry/LoraWAN-Server)
+- [Lora-Packet](https://github.com/anthonykirby/lora-packet)
+- [MQTT.js](https://github.com/mqttjs)
 - [Aloes handlers](https://www.npmjs.com/package/aloes-handlers)
 - [Device manager](https://framagit.org/getlarge/device-manager)
 
@@ -52,16 +55,6 @@ You can override these by populating `deploy` with files corresponding to an env
 ```bash
   $ npm run dev
 ```
-
-
-## Debug
-
-```bash
-  $ DEBUG=loopback npm run dev
-```
-
-[More info...](https://loopback.io/doc/en/lb3/Setting-debug-strings.html)
-
 
 
 ## Deploying project

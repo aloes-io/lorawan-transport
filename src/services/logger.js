@@ -1,10 +1,10 @@
-// eslint-disable no-console
+/* eslint-disable no-console */
 import colors from 'colors';
 
 colors.setTheme({
-  SERVER: ['green', 'bold'],
-  GATEWAY: ['yellow', 'bold'],
-  MQTT: ['blue', 'bold'],
+  LORA_SERVER: ['green', 'bold'],
+  LORA_DECODER: ['yellow', 'bold'],
+  MQTT_BRIDGE: ['blue', 'bold'],
   CONFIG: ['white', 'bold', 'bgBlue'],
   DEFAULT: 'white',
   warn: 'yellow',
@@ -24,19 +24,18 @@ logger.publish = (priority, collectionName, command, content) => {
     } else if (typeof content !== 'object') {
       fullContent = `[${collectionName.toUpperCase()}] ${command} : ${content}`;
     }
-
     switch (collectionName.toUpperCase()) {
       case 'CONFIG':
         console.log(`${fullContent}`.CONFIG);
         break;
-      case 'SERVER':
-        console.log(`${fullContent}`.SERVER);
+      case 'LORA-SERVER':
+        console.log(`${fullContent}`.LORA_SERVER);
         break;
-      case 'GATEWAY':
-        console.log(`${fullContent}`.GATEWAY);
+      case 'LORA-DECODER':
+        console.log(`${fullContent}`.LORA_DECODER);
         break;
-      case 'MQTT':
-        console.log(`${fullContent}`.MQTT);
+      case 'MQTT-BRIDGE':
+        console.log(`${fullContent}`.MQTT_BRIDGE);
         break;
       default:
         console.log(`${fullContent}`.DEFAULT);

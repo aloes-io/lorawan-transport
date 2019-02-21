@@ -4,14 +4,15 @@ const result = dotenv.config();
 if (result.error) {
   throw result.error;
 }
-console.log("[PM2] Parsing dotenv config : ", result.parsed);
+//  console.log("[PM2] Parsing dotenv config : ", result.parsed);
+
 module.exports = {
   apps: [
     {
-      script: "./index.js",
-      interpreter: "./node_modules/babel-cli/bin/babel-node.js",
-      output: "./log/aloes.out.log",
-      error: "./log/aloes.error.log",
+      script: "./src/index.js",
+      interpreter: "./node_modules/@babel/node/bin/babel-node.js",
+      output: "./log/lorawan-transport.out.log",
+      error: "./log/lorawan-transport.error.log",
       max_memory_restart: "1G",
       restart_delay: 500,
       wait_ready: true,
@@ -32,7 +33,7 @@ module.exports = {
   ],
   deploy: {
     staging: {
-      key: "~/.ssh/server5",
+      key: "~/.ssh/id_rsa",
       user: `${result.parsed.VPS_STAGE_USER}`,
       host: [result.parsed.VPS_STAGE_HOST],
       ssh_options: ["Port=22", "StrictHostKeyChecking=yes"],

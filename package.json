@@ -1,13 +1,14 @@
 {
   "name": "lorawan-transport",
   "version": "0.1.0",
-  "description": "LoraWan server-mqtt bridge",
+  "description": "LoraWan Server - MQTT bridge",
   "main": "src/index.js",
   "scripts": {
     "lint": "npx eslint --ext js .",
     "start": "babel-node ./src/index.js",
     "dev": "cp deploy/.env_dev .env && NODE_ENV=development nodemon --exec babel-node ./src/index.js",
     "devLocal": "cp deploy/.env_local .env && NODE_ENV=local nodemon --exec babel-node ./src/index.js",
+    "stage": "cp deploy/.env_staging .env && NODE_ENV=staging nodemon --exec babel-node ./src/index.js",
     "startStage": "pm2 startOrRestart ecosystem.config.js --env staging --update-env",
     "startProd": "pm2 startOrRestart ecosystem.config.js --env production --update-env"
   },
@@ -19,14 +20,17 @@
     "Interoperability"
   ],
   "dependencies": {
+    "aloes-handlers": "^1.1.5",
     "async-mqtt": "^2.0.0",
     "buffer-reverse": "^1.0.1",
     "colors": "^1.3.3",
     "crypto-js": "^3.1.9-1",
     "dotenv": "^6.2.0",
-    "lorawan-js": "^0.1.1",
+    "lodash": "^4.17.11",
+    "lora-packet": "^0.7.7",
     "mqtt-pattern": "^1.2.0",
-    "node-aes-cmac": "^0.1.1"
+    "node-aes-cmac": "^0.1.1",
+    "oma-json": "^1.0.5"
   },
   "devDependencies": {
     "@babel/cli": "^7.0.0",
@@ -113,7 +117,7 @@
   "eslintIgnore": [
     "/dist/",
     "/node_modules/",
-    "aloes-handlers.min.js"
+    "/src/CayenneLPP/tests/"
   ],
   "repository": {
     "type": "git",

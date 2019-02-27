@@ -13,7 +13,7 @@
     "docs:app": "jsdoc2md ./src/index.js > ./docs/app/README.md",
     "docs:md": "npm run docs:app ; npm run docs:config ; npm run docs:server ; npm run docs:controller ;  npm run docs:handler ; npm run docs:bridge",
     "docs:dev": "npm run docs:md ; cp ./README.md ./docs/readme/. ; vuepress dev docs",
-    "docs:build": "npm run docs:md ; cp ./README.md ./docs/readme/. ; vuepress build docs",
+    "docs:build": "npm run docs:md ; cp ./README.md ./docs/readme/. ; vuepress build docs ; cp -r ./docs/.vuepress/public/* ./public",
     "docs:serve": "light-server -s public -p 7000 --servePrefix /lorawan-transport/",
     "start": "babel-node ./src/index.js",
     "start:dev": "cp deploy/.env_dev .env && NODE_ENV=development nodemon --exec babel-node ./src/index.js",

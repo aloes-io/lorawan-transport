@@ -24,8 +24,6 @@ LoraWan MQTT API build upon :
 
 - /deploy --> contains environment variables ( hidden files )
 
-- /docs --> auto generated documentation
-
 - /log --> contains logs from PM2
 
 - /src --> contains source code

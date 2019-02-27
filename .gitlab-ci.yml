@@ -10,9 +10,6 @@ before_script:
 pages:
   stage: deploy
   script:
-    - mkdir .public
-    - cp -r docs/.vuepress/public/* .public
-    - mv .public public
     - npm run docs:build
   artifacts:
     paths:

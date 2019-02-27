@@ -4,15 +4,29 @@ import {cayenneBufferDecoder, cayenneEncoder} from 'aloes-handlers';
 import logger from './logger';
 import utils from './utils';
 
-const loraWanDecoder = {};
+/**
+ * @module loraWanHandler
+ */
 //  const asyncFromWire = promisify(loraPacket.fromWire);
 
-loraWanDecoder.decodePacket = buffer => {
+/**
+ * @method
+ * @param {object} buffer - Buffer containing LoRaPacket.
+ * @returns {object} packet
+ */
+const decodePacket = buffer => {
   const packet = loraPacket.fromWire(buffer);
+  // const packetIsOk = loraPacket.calculateMIC(packet);
   return packet;
 };
 
-loraWanDecoder.parseCayennePayload = async (packet, appSKey, nwkSKey) => {
+/**
+ * @param {object} packet - LoRaPacket.
+ * @param {object} appSKey - LoraWAN AppSKey.
+ * @param {object} nwkSKey - LoraWAN NwkSKey.
+ * @returns {object} packet - {loraPacket, caynnePayload}
+ */
+const parseCayennePayload = async (packet, appSKey, nwkSKey) => {
   try {
     if (typeof nwkSKey !== 'object' || typeof nwkSKey === 'string') {
       nwkSKey = Buffer.from(nwkSKey, 'hex');
@@ -37,9 +51,13 @@ loraWanDecoder.parseCayennePayload = async (packet, appSKey, nwkSKey) => {
   }
 };
 
-loraWanDecoder.buildCayennePayload = async sensor => {
+/**
+ * @method
+ * @param {object} sensor - AloesClient sensor instance.
+ * @returns {object} cayennePayload
+ */
+const buildCayennePayload = async sensor => {
   try {
-    // update encoder function to receive one argument
     const cayennePayload = await cayenneEncoder(sensor);
     return cayennePayload;
   } catch (error) {
@@ -48,7 +66,13 @@ loraWanDecoder.buildCayennePayload = async sensor => {
   }
 };
 
-loraWanDecoder.resolveJoinRequest = (packet, appKey, netID) => {
+/**
+ * @param {object} packet - LoRaPacket.
+ * @param {object} appKey - LoraWAN appKey.
+ * @param {number} netID - LoraWAN netID.
+ * @returns {object} decoded - {appNonce, netID, nwkSKey, appSKey}
+ */
+const resolveJoinRequest = (packet, appKey, netID) => {
   try {
     if (typeof appKey === 'object' && appKey instanceof Buffer) {
       appKey = appKey.toString('hex');
@@ -76,9 +100,12 @@ loraWanDecoder.resolveJoinRequest = (packet, appKey, netID) => {
   }
 };
 
-loraWanDecoder.buildPacket = options => {
+/**
+ * @param {object} options - Options containing LoRaWAN full Packet parameters.
+ * @returns {object} txpk
+ */
+const buildPacket = options => {
   try {
-    //  console.log('buildPacket', options);
     if (
       !options ||
       !options.devAddr ||
@@ -261,9 +288,17 @@ loraWanDecoder.buildPacket = options => {
     logger.publish(3, 'Lora-decoder', 'buildPacket:res', txpk.data);
     return txpk;
   } catch (error) {
-    logger.publish(4, 'Lora-Server', 'buildPacket:err', error);
+    logger.publish(4, 'Lora-decoder', 'buildPacket:err', error);
     return error;
   }
 };
 
-export default loraWanDecoder;
+const loraWanHandler = {
+  decodePacket,
+  parseCayennePayload,
+  buildCayennePayload,
+  resolveJoinRequest,
+  buildPacket,
+};
+
+export default loraWanHandler;

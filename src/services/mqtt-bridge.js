@@ -5,17 +5,105 @@ import EventEmitter from 'events';
 import protocolRef from './common';
 import logger from './logger';
 
+/**
+ * LoraWan Proxy
+ * @module mqttBridge
+ */
 export const mqttBridge = new EventEmitter();
-let client;
 
-mqttBridge.on('init', config => {
-  logger.publish(3, 'mqtt-bridge', 'init', config.mqtt);
-  client = mqtt.connect(config.brokerUrl, config.mqtt);
+/**
+ * @method
+ * @param {object} message - Formatted message
+ * @fires module:mqttBridge~message
+ */
+const send = message => {
+  /**
+   * Event reporting that MQTT Client received a message.
+   * @event module:mqttBridge~message
+   * @property {object} message - Message content.
+   */
+  mqttBridge.emit('message', message);
+};
 
+/**
+ * Parse message coming from MQTT broker
+ * @param {string} topic - MQTT Topic
+ * @param {object} message - raw packet.payload
+ */
+const parseBrokerMessage = (topic, message) => {
+  try {
+    let aloesClientRoute = null;
+    if (mqttPattern.matches(protocolRef.externalPattern, topic)) {
+      aloesClientRoute = mqttPattern.exec(protocolRef.externalPattern, topic);
+      logger(4, 'mqtt-bridge', 'aloesClientRoute:res', aloesClientRoute);
+    }
+    if (aloesClientRoute === null) {
+      return new Error('Error: Invalid pattern');
+    }
+    if (aloesClientRoute.appEui !== mqttBridge.username) {
+      return new Error('Error: Invalid app Id');
+    }
+    const methodExists = protocolRef.validators.methods.some(
+      meth => meth === aloesClientRoute.method,
+    );
+    const collectionNameExists = protocolRef.validators.collectionNames.some(
+      name => name === aloesClientRoute.collectionName,
+    );
+    logger(4, 'mqtt-bridge', 'aloesClientRoute:res', {
+      methodExists,
+      collectionNameExists,
+    });
+    if (methodExists && collectionNameExists) {
+      message = JSON.parse(message);
+      if (message.gateway && message.direction && message.type) {
+        switch (aloesClientRoute.collectionName.toLowerCase()) {
+          case 'application':
+            message = {...message};
+            break;
+          case 'device':
+            message = {...message};
+            break;
+          case 'sensor':
+            if (!message.sensor) {
+              return new Error('Error: No sensor instance');
+            }
+            message = {...message};
+            break;
+          default:
+            return new Error('Error: Comment est-ce possible?');
+        }
+        // read packet.mType ?
+
+        send(message);
+        return aloesClientRoute;
+      }
+      return new Error('Error: Invalid message');
+    }
+    return new Error('Error: Invalid pattern');
+  } catch (error) {
+    return error;
+  }
+};
+
+/**
+ * Listen to MQTT Client events
+ * @param {object} client - MQTT client instance
+ */
+const setBrokerListeners = client => {
+  /**
+   * @event module:mqttClient~error
+   * @param {object} error - Connection error
+   * @fires module:mqttBridge~error
+   */
   client.on('error', err => {
     mqttBridge.emit('error', err);
   });
 
+  /**
+   * @event module:mqttClient~connect
+   * @param {object} state - Connection status
+   * @fires module:mqttBridge~status
+   */
   client.on('connect', async state => {
     mqttBridge.emit('status', state);
     mqttBridge.username = client._client.options.username;
@@ -25,68 +113,33 @@ mqttBridge.on('init', config => {
     }
   });
 
+  /**
+   * @event module:mqttClient~disconnect
+   * @param {object} state - Connection status
+   * @fires module:mqttBridge~status
+   */
   client.on('disconnect', state => {
     delete mqttBridge.username;
     mqttBridge.connected = false;
     mqttBridge.emit('status', state);
   });
 
-  client.on('message', async (topic, message) => {
-    try {
-      let aloesClientRoute = null;
-      if (mqttPattern.matches(protocolRef.externalPattern, topic)) {
-        aloesClientRoute = mqttPattern.exec(protocolRef.externalPattern, topic);
-        logger(4, 'mqtt-bridge', 'aloesClientRoute:res', aloesClientRoute);
-      }
-      if (aloesClientRoute === null) {
-        return new Error('Error: Invalid pattern');
-      }
-      if (aloesClientRoute.appEui !== mqttBridge.username) {
-        return new Error('Error: Invalid app Id');
-      }
-      const methodExists = protocolRef.validators.methods.some(
-        meth => meth === aloesClientRoute.method,
-      );
-      const collectionNameExists = protocolRef.validators.collectionNames.some(
-        name => name === aloesClientRoute.collectionName,
-      );
-      logger(4, 'mqtt-bridge', 'aloesClientRoute:res', {
-        methodExists,
-        collectionNameExists,
-      });
-      if (methodExists && collectionNameExists) {
-        message = JSON.parse(message);
-        if (message.gateway && message.direction && message.type) {
-          switch (aloesClientRoute.collectionName.toLowerCase()) {
-            case 'application':
-              message = {...message};
-              break;
-            case 'device':
-              message = {...message};
-              break;
-            case 'sensor':
-              if (!message.sensor) {
-                return new Error('Error: No sensor instance');
-              }
-              message = {...message};
-              break;
-            default:
-              return new Error('Error: Comment est-ce possible?');
-          }
-          // read packet.mType ?
-          mqttBridge.emit('message', message);
-          return aloesClientRoute;
-        }
-        return new Error('Error: Invalid message');
-      }
-      return new Error('Error: Invalid pattern');
-    } catch (error) {
-      return error;
-    }
-  });
-});
+  /**
+   * @event module:mqttClient~message
+   * @param {object} topic - MQTT Topic
+   * @param {object} message - MQTT Payload
+   */
+  client.on('message', async (topic, message) =>
+    parseBrokerMessage(topic, message),
+  );
+};
 
-mqttBridge.on('publish', async message => {
+/**
+ * Parse internal application messages
+ * @param {object} client - MQTT client instance
+ * @param {object} message - Raw MQTT payload
+ */
+const parseAppMessage = async (client, message) => {
   try {
     if (!client || !mqttBridge.connected || !mqttBridge.username) {
       return new Error('Error: Invalid mqtt client');
@@ -180,10 +233,51 @@ mqttBridge.on('publish', async message => {
     logger.publish(4, 'mqtt-bridge', 'publish:err', error);
     return error;
   }
-});
+};
 
-mqttBridge.on('close', () => {
-  if (client) {
-    client.end();
-  }
+/**
+ * Listen to Application internal events
+ * @param {object} server - LoraWan Server instance
+ */
+
+const setAppListeners = client => {
+  /**
+   * Event reporting that mqttBridge has to proxy a message.
+   * @event module:mqttBridge~publish
+   * @param {object} message - LoraWan message.
+   */
+  mqttBridge.on('publish', async message => parseAppMessage(client, message));
+  /**
+   * Event reporting that mqttBridge has to close.
+   * @event module:mqttBridge~close
+   */
+  mqttBridge.on('close', () => {
+    if (client) {
+      client.end();
+    }
+  });
+};
+
+/**
+ * Init MQTT Bridge
+ * @param {object} config - Env variables
+ */
+const init = config => {
+  logger.publish(3, 'mqtt-bridge', 'init', config.mqtt);
+  /**
+   * MQTT.JS Client.
+   * @module mqttClient
+   */
+  const mqttClient = mqtt.connect(config.brokerUrl, config.mqtt);
+  setBrokerListeners(mqttClient);
+  setAppListeners(mqttClient);
+};
+
+/**
+ * Event reporting that mqttBridge has to init.
+ * @event module:mqttBridge~init
+ * @param {object} config - Formatted config.
+ */
+mqttBridge.on('init', config => {
+  init(config);
 });

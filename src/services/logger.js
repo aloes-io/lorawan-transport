@@ -13,6 +13,13 @@ colors.setTheme({
 
 const logger = {};
 
+/**
+ * @module logger
+ * @param {int} priority - Logger mode.
+ * @param {string} collectionName - service name.
+ * @param {string} command - service command to log.
+ * @param {string} content - log content.
+ */
 logger.publish = (priority, collectionName, command, content) => {
   const logLevel = Number(process.env.SERVER_LOGGER_LEVEL) || 4;
   let fullContent;

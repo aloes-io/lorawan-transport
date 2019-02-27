@@ -1,9 +1,18 @@
 import EventEmitter from 'events';
 import logger from './services/logger';
 
+/**
+ * @module appConfig
+ */
+
 export const appConfig = new EventEmitter();
 
-appConfig.on('init', envVariables => {
+/**
+ * Init Application config
+ * @param {object} config - Env variables
+ * @fires module:appConfig~done
+ */
+const init = envVariables => {
   logger.publish(3, 'config', 'init', envVariables);
   const config = {
     brokerUrl: envVariables.MQTT_BROKER_URL,
@@ -28,6 +37,19 @@ appConfig.on('init', envVariables => {
       address: envVariables.LORA_SERVER_HOST,
     },
   };
-
+  /**
+   * Event reporting that appConfig has done the job.
+   * @event module:appConfig~done
+   * @param {object} config - Configuration set by env variables.
+   */
   appConfig.emit('done', config);
+};
+
+/**
+ * Event reporting that appConfig has to init.
+ * @event module:appConfig~init
+ * @param {object} envVariables - Environment variables.
+ */
+appConfig.on('init', envVariables => {
+  init(envVariables);
 });

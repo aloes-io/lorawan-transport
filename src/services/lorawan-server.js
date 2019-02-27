@@ -1,8 +1,6 @@
-/*!
- * lorawan-js
- * Copyright(c) 2017 Dmitry Sukhamera
- * MIT Licensed
- */
+import dgram from 'dgram';
+import EventEmitter from 'events';
+
 const UDP_MSG_PRMBL_OFF = 12;
 const PROTOCOL_VERSION = 2;
 
@@ -14,11 +12,12 @@ const PKT_PULL_ACK = 4;
 const PKT_TX_ACK = 5;
 
 /**
- * Module dependencies.
+ * @module LoraWanServer
  */
-const dgram = require('dgram');
-const EventEmitter = require('events').EventEmitter;
 
+/**
+ * @class
+ */
 function Server(opts, callback) {
   if (!(this instanceof Server)) {
     return new Server(opts, callback);
@@ -47,14 +46,22 @@ function Server(opts, callback) {
   }
 
   this.status = 'STOP';
-  //  const that = this;
+  //  const self = this;
 }
 
 module.exports = Server;
 
 Server.prototype = Object.create(EventEmitter.prototype);
 
-const pushAck = (that, clientInfo, tokens, gateway) => {
+/**
+ * @static
+ * @param {object} self - Server instance.
+ * @param {object} clientInfo - UDP client config.
+ * @param {object} tokens - Gateway tokens.
+ * @param {object} gateway - Gateway instance.
+ * @returns {function} Server.send()
+ */
+const pushAck = (self, clientInfo, tokens, gateway) => {
   try {
     const pushAckPkt = Buffer.alloc(4);
     pushAckPkt[0] = PROTOCOL_VERSION;
@@ -71,10 +78,10 @@ const pushAck = (that, clientInfo, tokens, gateway) => {
       gateway,
     };
     let socket;
-    if (that.socketup) {
-      socket = that.socketup;
-    } else if (that.socket) {
-      socket = that.socket;
+    if (self.socketup) {
+      socket = self.socketup;
+    } else if (self.socket) {
+      socket = self.socket;
     } else {
       return new Error('Error: No active socket connection');
     }
@@ -86,7 +93,7 @@ const pushAck = (that, clientInfo, tokens, gateway) => {
       clientInfo.address,
       err => {
         if (!err) {
-          that.emit('pushack', message, clientInfo);
+          self.emit('pushack', message, clientInfo);
         }
       },
     );
@@ -95,7 +102,15 @@ const pushAck = (that, clientInfo, tokens, gateway) => {
   }
 };
 
-const pullAck = (that, clientInfo, tokens, gateway) => {
+/**
+ * @static
+ * @param {object} self - Server instance.
+ * @param {object} clientInfo - UDP client config.
+ * @param {object} tokens - Gateway tokens.
+ * @param {object} gateway - Gateway instance.
+ * @returns {function} Server.send()
+ */
+const pullAck = (self, clientInfo, tokens, gateway) => {
   try {
     const pullAckPkt = Buffer.alloc(4);
     pullAckPkt[0] = PROTOCOL_VERSION;
@@ -112,10 +127,10 @@ const pullAck = (that, clientInfo, tokens, gateway) => {
       gateway,
     };
     let socket;
-    if (that.socketdown) {
-      socket = that.socketdown;
-    } else if (that.socket) {
-      socket = that.socket;
+    if (self.socketdown) {
+      socket = self.socketdown;
+    } else if (self.socket) {
+      socket = self.socket;
     } else {
       return new Error('Error: No active socket connection');
     }
@@ -127,7 +142,7 @@ const pullAck = (that, clientInfo, tokens, gateway) => {
       clientInfo.address,
       err => {
         if (!err) {
-          that.emit('pullack', message, clientInfo);
+          self.emit('pullack', message, clientInfo);
         }
       },
     );
@@ -136,6 +151,11 @@ const pullAck = (that, clientInfo, tokens, gateway) => {
   }
 };
 
+/**
+ * @static
+ * @param {object} socketData - UDP message.
+ * @returns {object} parsedMessage
+ */
 const socketDataToString = socketData => {
   const dataString = socketData.toString(
     'utf8',
@@ -148,7 +168,14 @@ const socketDataToString = socketData => {
   return '';
 };
 
-const parseMessage = async (that, socketData, clientInfo) => {
+/**
+ * @static
+ * @param {object} self - Server instance.
+ * @param {object} socketData - UDP message.
+ * @param {object} clientInfo - UDP client config.
+ * @returns {object} parsedMessage
+ */
+const parseMessage = async (self, socketData, clientInfo) => {
   try {
     const message = {};
     message.protocol = socketData[0];
@@ -173,28 +200,31 @@ const parseMessage = async (that, socketData, clientInfo) => {
         message.type = 'PUSH_DATA';
         message.direction = 'RX';
         message.data = await socketDataToString(socketData);
-        await that.emit('pushdata', message, clientInfo);
+        /**
+         * @fires module:loraWanServer~pushdata
+         */
+        await self.emit('pushdata', message, clientInfo);
         break;
       // case PKT_PUSH_ACK:
       //   message.type = 'PUSH_ACK';
       //   message.direction = 'DOWN';
-      //   that.emit('pushack', message, clientInfo);
+      //   self.emit('pushack', message, clientInfo);
       //   break;
       case PKT_PULL_DATA:
         message.type = 'PULL_DATA';
         message.direction = 'TX';
-        await that.emit('pulldata', message, clientInfo);
+        await self.emit('pulldata', message, clientInfo);
         break;
       // case PKT_PULL_ACK:
       //   message.type = 'PULL_ACK';
       //   message.direction = 'UP';
-      //   that.emit('pullack', message, clientInfo);
+      //   self.emit('pullack', message, clientInfo);
       //   break;
       case PKT_TX_ACK:
         message.type = 'TX_ACK';
         message.direction = 'RX';
         message.data = await socketDataToString(socketData);
-        await that.emit('txack', message, clientInfo);
+        await self.emit('txack', message, clientInfo);
         break;
       default:
         return 'Packet type not recognized';
@@ -205,115 +235,13 @@ const parseMessage = async (that, socketData, clientInfo) => {
   }
 };
 
-Server.prototype.stop = function stop() {
-  if (this.status && this.opts.port) {
-    this.socket.close();
-  } else if (this.status) {
-    this.socketup.close();
-    this.socketdown.close();
-  }
-  //  else {
-  //  console.log('Nothing to stop');
-  //  }
-};
-
-Server.prototype.start = function start() {
-  if (this.opts.port) {
-    this.socket = dgram.createSocket('udp4');
-    //  const asyncSend = promisify(this.socket.send);
-    this.socket.bind(this.opts.port, this.opts.address);
-
-    this.socket.on('listening', () => {
-      this.status = 'RUN';
-      this.emit('ready', this.socket.address());
-    });
-    this.socket.on('close', () => {
-      this.status = 'STOP';
-      this.emit('close', this.socket.address());
-    });
-
-    this.socket.on('error', err => {
-      this.socket.close();
-      this.emit('error', this.socket.address(), err);
-    });
-
-    this.socket.on('message', (socketData, clientInfo) => {
-      parseMessage(this, socketData, clientInfo);
-    });
-  } else {
-    this.socketup = dgram.createSocket('udp4');
-    this.socketup.bind(this.opts.portup, this.opts.address);
-    this.socketup.on('listening', () => {
-      this.emit('ready', this.socketup.address(), 'RX');
-    });
-
-    this.socketdown = dgram.createSocket('udp4');
-    this.socketdown.bind(this.opts.portdown, this.opts.address);
-    this.socketdown.on('listening', () => {
-      this.emit('ready', this.socketdown.address(), 'TX');
-    });
-
-    this.socketup.on('close', () => {
-      this.emit('close', this.socketup.address(), 'RX');
-    });
-    this.socketdown.on('close', () => {
-      this.emit('close', this.socketdown.address(), 'TX');
-    });
-
-    this.socketup.on('error', err => {
-      this.socketup.close();
-      this.socketdown.close();
-      this.emit('error', this.socketup.address(), err, 'RX');
-    });
-
-    this.socketdown.on('error', err => {
-      this.socketup.close();
-      this.socketdown.close();
-      this.emit('error', this.socketdown.address(), err, 'TX');
-    });
-
-    this.socketup.on('message', (socketData, clientInfo) => {
-      parseMessage(this, socketData, clientInfo);
-      //  this.emit('upLink', clientInfo);
-    });
-
-    this.socketdown.on('message', (socketData, clientInfo) => {
-      parseMessage(this, socketData, clientInfo);
-      //  this.emit('downLink', clientInfo);
-    });
-  }
-  if (this.socket || (this.socketup && this.socketdown)) {
-    this.on('pushdata', (message, clientInfo) => {
-      const tokens = {h: message.tokenH, l: message.tokenL};
-      if (message.data.stat) {
-        this.emit('pushdata:status', message, clientInfo);
-      } else if (message.data.rxpk) {
-        this.emit('pushdata:rxpk', message, clientInfo);
-      }
-      // todo add message.data in push_ack to resolve it after ?
-      pushAck(this, clientInfo, tokens, message.gateway);
-    });
-
-    this.on('pulldata', (message, clientInfo) => {
-      const tokens = {h: message.tokenH, l: message.tokenL};
-      if (message.txpk) {
-        this.emit('pulldata:txpk', message, clientInfo);
-      }
-      pullAck(this, clientInfo, tokens, message.gateway);
-    });
-
-    this.on('pullresp', (message, clientInfo) => {
-      //  const tokens = {h: message.tokenH, l: message.tokenL};
-      if (message.txpk) {
-        this.emit('pullresp:txpk', message, clientInfo);
-      }
-      //  pullAck(this, clientInfo, tokens,message.gateway);
-    });
-
-    //  this.on('txack', (message, clientInfo) => {});
-  }
-};
-
+/**
+ * @param {object} txpk - LoraWAN full packet.
+ * @param {object} tokens - Gateway tokens.
+ * @param {object} clientInfo - UDP client config.
+ * @param {object} gateway - Gateway instance.
+ * @returns {function} Server.send()
+ */
 Server.prototype.pullResp = function pullResp(
   txpk,
   tokens,
@@ -379,4 +307,196 @@ Server.prototype.pullResp = function pullResp(
       }
     },
   );
+};
+
+/**
+ * @method
+ */
+Server.prototype.stop = function stop() {
+  if (this.status && this.opts.port) {
+    this.socket.close();
+  } else if (this.status) {
+    this.socketup.close();
+    this.socketdown.close();
+  }
+  //  else {
+  //  console.log('Nothing to stop');
+  //  }
+};
+
+/**
+ * @static
+ * @param {object} self - Server instance.
+ */
+const setLoraWANListeners = self => {
+  if (self.socket || (self.socketup && self.socketdown)) {
+    self.on('pushdata', (message, clientInfo) => {
+      const tokens = {h: message.tokenH, l: message.tokenL};
+      if (message.data.stat) {
+        self.emit('pushdata:status', message, clientInfo);
+      } else if (message.data.rxpk) {
+        self.emit('pushdata:rxpk', message, clientInfo);
+      }
+      // todo add message.data in push_ack to resolve it after ?
+      pushAck(self, clientInfo, tokens, message.gateway);
+    });
+
+    self.on('pulldata', (message, clientInfo) => {
+      const tokens = {h: message.tokenH, l: message.tokenL};
+      if (message.txpk) {
+        self.emit('pulldata:txpk', message, clientInfo);
+      }
+      pullAck(self, clientInfo, tokens, message.gateway);
+    });
+
+    self.on('pullresp', (message, clientInfo) => {
+      //  const tokens = {h: message.tokenH, l: message.tokenL};
+      if (message.txpk) {
+        self.emit('pullresp:txpk', message, clientInfo);
+      }
+      //  pullAck(self, clientInfo, tokens,message.gateway);
+    });
+
+    //  self.on('txack', (message, clientInfo) => {});
+  }
+};
+
+/**
+ * @static
+ * @param {object} self - Server instance.
+ */
+const setUDPServer = self => {
+  if (self.opts.port) {
+    /**
+     * @module UDPSocket
+     */
+    self.socket = dgram.createSocket('udp4');
+    //  const asyncSend = promisify(self.socket.send);
+    self.socket.bind(self.opts.port, self.opts.address);
+
+    /**
+     * @event module:UDPSocket~listening
+     * @fires module:loraWanServer~ready
+     */
+    self.socket.on('listening', () => {
+      self.status = 'RUN';
+      self.emit('ready', self.socket.address());
+    });
+
+    /**
+     * @event module:UDPSocket~close
+     * @fires module:loraWanServer~close
+     */
+    self.socket.on('close', () => {
+      self.status = 'STOP';
+      self.emit('close', self.socket.address());
+    });
+
+    /**
+     * @event module:UDPSocket~error
+     * @fires module:loraWanServer~error
+     */
+    self.socket.on('error', err => {
+      self.socket.close();
+      self.emit('error', self.socket.address(), err);
+    });
+
+    /**
+     * @event module:UDPSocket~message
+     * @returns {functions} parseMessage
+     */
+    self.socket.on('message', (socketData, clientInfo) => {
+      parseMessage(self, socketData, clientInfo);
+    });
+  } else {
+    /**
+     * @module UDPSocketUp
+     */
+    self.socketup = dgram.createSocket('udp4');
+    self.socketup.bind(self.opts.portup, self.opts.address);
+
+    /**
+     * @event module:UDPSocketUp~listening
+     * @fires module:loraWanServer~ready
+     */
+    self.socketup.on('listening', () => {
+      self.emit('ready', self.socketup.address(), 'RX');
+    });
+
+    /**
+     * @module UDPSocketDown
+     */
+    self.socketdown = dgram.createSocket('udp4');
+    self.socketdown.bind(self.opts.portdown, self.opts.address);
+
+    /**
+     * @event module:UDPSocketDown~listening
+     * @fires module:loraWanServer~ready
+     */
+    self.socketdown.on('listening', () => {
+      self.emit('ready', self.socketdown.address(), 'TX');
+    });
+
+    /**
+     * @event module:UDPSocketUp~close
+     * @fires module:loraWanServer~close
+     */
+    self.socketup.on('close', () => {
+      self.emit('close', self.socketup.address(), 'RX');
+    });
+
+    /**
+     * @event module:UDPSocketDown~close
+     * @fires module:loraWanServer~close
+     */
+    self.socketdown.on('close', () => {
+      self.emit('close', self.socketdown.address(), 'TX');
+    });
+
+    /**
+     * @event module:UDPSocketUp~error
+     * @fires module:loraWanServer~error
+     */
+    self.socketup.on('error', err => {
+      self.socketup.close();
+      self.socketdown.close();
+      self.emit('error', self.socketup.address(), err, 'RX');
+    });
+
+    /**
+     * @event module:UDPSocketDown~error
+     * @fires module:loraWanServer~error
+     */
+    self.socketdown.on('error', err => {
+      self.socketup.close();
+      self.socketdown.close();
+      self.emit('error', self.socketdown.address(), err, 'TX');
+    });
+
+    /**
+     * @event module:UDPSocketUp~message
+     * @returns {functions} parseMessage
+     */
+    self.socketup.on('message', (socketData, clientInfo) => {
+      parseMessage(self, socketData, clientInfo);
+      //  self.emit('upLink', clientInfo);
+    });
+
+    /**
+     * @event module:UDPSocketDown~message
+     * @returns {functions} parseMessage
+     */
+    self.socketdown.on('message', (socketData, clientInfo) => {
+      parseMessage(self, socketData, clientInfo);
+      //  self.emit('downLink', clientInfo);
+    });
+  }
+};
+
+/**
+ * @method
+ */
+Server.prototype.start = function start() {
+  setUDPServer(this);
+  setLoraWANListeners(this);
 };

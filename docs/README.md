@@ -1,7 +1,7 @@
 ---
 lang: en-US
 home: true
-heroImage: /hero.png
+heroImage: /logo.png
 description: LoraWan Server - MQTT Bridge.
 features:
 - title: Frame logging

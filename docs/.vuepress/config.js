@@ -1,9 +1,10 @@
 module.exports = {
-	base: '/lorawan-transport',
+	title: 'Aloes - LoRaWAN Transport 🚦',
+	base: '/lorawan-transport/',
 	dest: 'public',
 	themeConfig: {
-		logo: '/hero.png',
-		repo: 'https://framagit.org/aloes/aloes-handlers',
+		logo: '/logo.png',
+		repo: 'https://framagit.org/aloes/lorawan-transport',
 		repoLabel: 'Git',
 		docsDir: 'docs',
 		nav: [
@@ -29,5 +30,4 @@ module.exports = {
 			// }
 		},
 	},
-	title: 'Aloes - LoRaWAN Transport 🚦',
 };

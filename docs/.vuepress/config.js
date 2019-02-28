@@ -1,5 +1,5 @@
 module.exports = {
-	base: '/lorawan-transport/',
+	base: '/lorawan-transport',
 	dest: 'public',
 	themeConfig: {
 		logo: '/hero.png',

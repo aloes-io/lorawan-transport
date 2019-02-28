@@ -6,14 +6,15 @@
   "scripts": {
     "lint": "npx eslint --ext js .",
     "docs:server": "jsdoc2md ./src/services/lorawan-server.js > ./docs/server/README.md",
+    "docs:common": "jsdoc2md ./src/services/common.js > ./docs/common/README.md",
     "docs:controller": "jsdoc2md ./src/services/lorawan-controller.js > ./docs/controller/README.md",
     "docs:handler": "jsdoc2md ./src/services/lorawan-handler.js > ./docs/handler/README.md",
     "docs:bridge": "jsdoc2md ./src/services/mqtt-bridge.js > ./docs/bridge/README.md",
     "docs:config": "jsdoc2md ./src/config.js > ./docs/config/README.md",
     "docs:app": "jsdoc2md ./src/index.js > ./docs/app/README.md",
-    "docs:md": "npm run docs:app ; npm run docs:config ; npm run docs:server ; npm run docs:controller ;  npm run docs:handler ; npm run docs:bridge",
+    "docs:md": "npm run docs:app ; npm run docs:config ; npm run docs:common ; npm run docs:server ; npm run docs:controller ;  npm run docs:handler ; npm run docs:bridge",
     "docs:dev": "npm run docs:md ; cp ./README.md ./docs/readme/. ; vuepress dev docs",
-    "docs:build": "npm run docs:md ; cp ./README.md ./docs/readme/. ; vuepress build docs ; cp -r ./docs/.vuepress/public/* ./public",
+    "docs:build": "npm run docs:md ; cp ./README.md ./docs/readme/. ; vuepress build docs",
     "docs:serve": "light-server -s public -p 7000 --servePrefix /lorawan-transport/",
     "start": "babel-node ./src/index.js",
     "start:dev": "cp deploy/.env_dev .env && NODE_ENV=development nodemon --exec babel-node ./src/index.js",
@@ -29,6 +30,10 @@
     "IoT",
     "MQTT"
   ],
+  "engines": {
+    "node": ">=9.0.0",
+    "npm": ">=6.0.0"
+  },
   "dependencies": {
     "aloes-handlers": "^1.1.5",
     "async-mqtt": "^2.0.0",
@@ -130,6 +135,7 @@
   },
   "eslintIgnore": [
     "/dist/",
+    "/public/",
     "/node_modules/"
   ],
   "repository": {

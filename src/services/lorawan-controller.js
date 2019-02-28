@@ -11,6 +11,15 @@ import utils from './utils';
 
 export const loraWanApp = new EventEmitter();
 
+/**
+ * In memory gateways collection caching
+ * @namespace
+ * @property {string}  `mac` - Gateway MAC Address
+ * @property {string}  `[mac].id` - Aloes deviceId
+ * @property {string}  `[mac].mac`
+ * @property {string}  `[mac].protocolName`
+ * @property {string}  `[mac].protocolVersion`
+ */
 const gateways = {
   '23299492': {
     id: null,
@@ -21,6 +30,28 @@ const gateways = {
     longitude: '',
   },
 };
+
+/**
+ * In memory nodes / sensors collection caching
+ * @namespace
+ * @property {string}  `[devId]` - Device Identifier ( devEui/devAddr )
+ * @property {string}  `[devId].id` - Aloes deviceId
+ * @property {string}  `[devId].name` - Device name
+ * @property {string}  `[devId].auth` - OTAA / ABP
+ * @property {string}  `[devId].devEui`
+ * @property {string}  `[devId].devAddr`
+ * @property {string}  `[devId].gwId` - gateway that trasmitted the last message ( MAC Address )
+ * @property {string}  `[devId].protocolName` - Messaging protocol used by the device
+ * @property {string}  `[devId].protocolVersion`
+ * @property {string}  `[devId][sensorId]` - sensor belonging to the device ( `sensor-${omaObjectId}-${nativeSensorId}` )
+ * @property {string}  `[devId][sensorId].id` - Aloes sensorId
+ * @property {string}  `[devId][sensorId].name` - Sensor name
+ * @property {number}  `[devId][sensorId].type` - {@link https://api.aloes.io/api/omaObjects OMA Objects}
+ * @property {number}  `[devId][sensorId].resource` - Last used oma resource
+ * @property {object}  `[devId][sensorId].resources` - {@link https://api.aloes.io/api/omaResources OMA Resources}
+ * @property {object}  `[devId][sensorId].colors` - {@link https://api.aloes.io/api/omaViews OMA Views}
+ * @property {array}  `[devId][sensorId].icons` - {@link https://api.aloes.io/api/omaViews OMA Views}
+ */
 const nodes = {
   '234243242': {
     id: null,
@@ -50,6 +81,7 @@ const nodes = {
   },
 };
 
+// todo attribute this dynamically ; from external application config ?
 const networkOptions = {
   imme: true,
   freq: 867.5,
@@ -67,8 +99,9 @@ const networkOptions = {
  * Parse received packet from LoraWan Gateways
  * @param {object} message - Parsed JSON
  * @fires module:loraWanApp~RX
+ * @throws Will throw an error if the message.data is null.
  */
-const parseRXLoraPacket = async message => {
+const handleRXLoraPacket = async message => {
   try {
     const pdata = message.data.rxpk[0].data;
     const buffer = Buffer.from(pdata, 'Base64');
@@ -141,7 +174,7 @@ const parseRXLoraPacket = async message => {
  * @param {object} message - Parsed JSON
  * @fires module:loraWanApp~TX
  */
-const parseTXLoraPacket = async message => {
+const handleTXLoraPacket = async message => {
   const pdata = message.txpk.data;
   const buffer = Buffer.from(pdata, 'base64');
   const packet = await loraWanHandler.decodePacket(buffer);
@@ -248,10 +281,10 @@ const parseServerMessage = (type, message, clientInfo) => {
         }
         break;
       case 'pushdata:rxpk':
-        parseRXLoraPacket();
+        handleRXLoraPacket();
         break;
       case 'pullresp:txpk':
-        parseTXLoraPacket();
+        handleTXLoraPacket();
         break;
       default:
         return null;
@@ -317,6 +350,7 @@ const setServerListeners = server => {
    * @event module:loraWanServer~pushack
    * @param {object} message - LoraWan full message.
    * @param {object} clientInfo - Client config.
+   * @returns {function} parseServerMessage
    */
   server.on('pushack', (message, clientInfo) => {
     parseServerMessage('pushack', message, clientInfo);
@@ -326,6 +360,7 @@ const setServerListeners = server => {
    * @event module:loraWanServer~pullack
    * @param {object} message - LoraWan full message.
    * @param {object} clientInfo - Client config.
+   * @returns {function} parseServerMessage
    */
   server.on('pullack', (message, clientInfo) => {
     parseServerMessage('pullack', message, clientInfo);
@@ -335,6 +370,7 @@ const setServerListeners = server => {
    * @event module:loraWanServer~txack
    * @param {object} message - LoraWan full message.
    * @param {object} clientInfo - Client config.
+   * @returns {function} parseServerMessage
    */
   server.on('txack', (message, clientInfo) => {
     parseServerMessage('txack', message, clientInfo);
@@ -344,6 +380,7 @@ const setServerListeners = server => {
    * @event module:loraWanServer~pushdata:rxpk
    * @param {object} message - LoraWan full message.
    * @param {object} clientInfo - Client config.
+   * @returns {function} parseServerMessage
    */
   server.on('pushdata:rxpk', async (message, clientInfo) => {
     parseServerMessage('pushdata:rxpk', message, clientInfo);
@@ -353,12 +390,171 @@ const setServerListeners = server => {
    * @event module:loraWanServer~pullresp:txpk
    * @param {object} message - LoraWan full message.
    * @param {object} clientInfo - Client config.
+   * @returns {function} parseServerMessage
    */
   server.on('pullresp:txpk', async (message, clientInfo) => {
     parseServerMessage('pullresp:txpk', message, clientInfo);
   });
 };
 
+/**
+ * Answer to valid join request
+ * @param {object} node - Found device instance
+ * @param {string} appKey - Device AppKey
+ * @returns {function} LoraWANServer.pullResp
+ */
+const buildJoinAccept = async (message, appKey) => {
+  // add netID to the payload ( put it device-manager lorawan app config )
+  const node = message.node;
+  const mType = node.packet.getMType().toString('hex');
+  const keys = await loraWanHandler.resolveJoinRequest(node.packet, appKey);
+  if (!keys.nwkSKey || !keys.appSKey) {
+    return 'Invalid keys';
+  }
+
+  const devEui = node.packet.getBuffers().DevEUI.toString('hex');
+  node.appSKey = keys.appSKey.toString('hex');
+  node.nwkSKey = keys.nwkSKey.toString('hex');
+  node.appKey = appKey;
+  nodes[devEui] = {...nodes[devEui], ...node};
+
+  const txpk = await loraWanHandler.buildPacket({
+    devAddr: utils.getRandomBytes(6).toString(),
+    devEui,
+    appEui: nodes[devEui].appEui,
+    mType: 'Join Accept',
+    ...networkOptions,
+    ...keys,
+    appKey,
+    //  payload
+  });
+  // todo find the closest gateway ?
+  return server.pullResp(
+    txpk,
+    {
+      h: Math.floor(Math.random() * 300),
+      l: Math.floor(Math.random() * 300),
+    },
+    {
+      address: message.gateway.address,
+      port: message.gateway.portdown,
+    },
+    message.gateway.id,
+  );
+};
+
+/**
+ * Dispatch incoming Lora packet
+ * @param {object} node - Found device instance
+ * @fires module:loraWanApp~RX
+ */
+const handleRXAppMessage = async message => {
+  const node = message.node;
+  const mType = node.packet.getMType().toString('hex');
+  const {
+    decodedPacket,
+    cayennePayload,
+  } = await loraWanHandler.parseCayennePayload(
+    Buffer.from(node.packet, 'hex'),
+    node.appSKey,
+    node.nwkSKey,
+  );
+
+  const devAddr = decodedPacket.getBuffers().DevAddr.toString('hex');
+  node.protocolName = 'cayenneLPP';
+  node.packet = decodedPacket.getPHYPayload().toString('hex');
+  node.lastPush = decodedPacket.getPHYPayload().toString('hex');
+  node.cayennePayload = cayennePayload;
+  nodes[devAddr] = {...nodes[devAddr], ...node};
+  logger.publish(4, 'Lora-Server', 'onMessage:res :', nodes[devAddr]);
+  await loraWanApp.emit(message.direction, {
+    gateway: message.gateway,
+    type: mType,
+    direction: message.direction,
+    node: nodes[devAddr],
+  });
+
+  return cayennePayload.forEach(async sensor => {
+    if (sensor && sensor.nativeSensorId && sensor.type) {
+      const key = `sensor-${sensor.type}-${sensor.nativeSensorId}`;
+      if (!Object.prototype.hasOwnProperty.call(nodes[devAddr], key)) {
+        nodes[devAddr][key] = sensor;
+        return loraWanApp.emit(message.direction, {
+          gateway: message.gateway,
+          type: mType,
+          direction: message.direction,
+          sensor: nodes[devAddr][key],
+        });
+      }
+      nodes[devAddr][key] = {
+        // cayennePayload,
+        ...nodes[devAddr][key],
+        ...sensor,
+      };
+      return loraWanApp.emit(message.direction, {
+        gateway: message.gateway,
+        type: mType,
+        direction: message.direction,
+        sensor: nodes[devAddr][key],
+      });
+    }
+    return null;
+  });
+};
+
+/**
+ * Dispatch outgoing Lora packet
+ * @param {object} sensor - Found sensor instance
+ * @returns {function} LoraWANServer.pullResp
+ */
+const handleTXAppMessage = async message => {
+  const sensor = message.sensor;
+  const devAddr = sensor.packet.getBuffers().DevAddr.toString('hex');
+  //  const devEui = sensor.packet.getBuffers().DevEUI.toString('hex');
+  // fromWire(sensor.packet)
+
+  const key = `sensor-${sensor.type}-${sensor.nativeSensorId}`;
+  if (!Object.prototype.hasOwnProperty.call(nodes[devAddr], key)) {
+    return new Error("Error: sensor doesn't exist");
+  }
+  if (!nodes[devAddr].appSKey || !nodes[devAddr].nwkSKey) {
+    return new Error('Error: device not authenticated');
+  }
+
+  // todo switch based on messaging protocol used
+  // retrieve info from a property ?
+  // or dynamically from the payload structure ?
+  // if (sensor.protocolName === "cayenneLPP") {
+  // }
+  nodes[devAddr][key] = {
+    ...nodes[devAddr][key],
+    ...sensor,
+  };
+  const payload = await loraWanHandler.buildCayennePayload(sensor);
+  //  console.log('built payload', payload);
+
+  //  sensor.cayennePayload = payload;
+  const txpk = await loraWanHandler.buildPacket({
+    devAddr,
+    payload,
+    mType: 'Unconfirmed Data Down',
+    ...networkOptions,
+    nwkSKey: nodes[devAddr].nwkSKey,
+    appSKey: nodes[devAddr].appSKey,
+  });
+  return server.pullResp(
+    txpk,
+    {
+      h: Math.floor(Math.random() * 300),
+      l: Math.floor(Math.random() * 300),
+    },
+    {
+      address: message.gateway.address,
+      port: message.gateway.portdown,
+    },
+    message.gateway.id,
+  );
+};
 /**
  * Parse internal application messages
  * @param {object} server - LoraWan Server instance
@@ -370,13 +566,13 @@ const parseAppMessage = async (server, message) => {
     if (!message || !message.direction || !message.gateway || !message.type) {
       return new Error('Error: Invalid message');
     }
+    // UpdateDevice Instance
     if (message.node && message.node.packet) {
       const node = message.node;
       const mType = node.packet.getMType().toString('hex');
 
       if (node.appKey) {
         let appKey;
-
         if (typeof node.appKey === 'object' && node.appKey instanceof Buffer) {
           appKey = node.appKey.toString('hex');
         } else {
@@ -384,43 +580,7 @@ const parseAppMessage = async (server, message) => {
         }
         if (mType && mType.toLowerCase() === 'join request') {
           // add netID to the payload ( put it device-manager lorawan app config )
-          const keys = await loraWanHandler.resolveJoinRequest(
-            node.packet,
-            appKey,
-          );
-          if (!keys.nwkSKey || !keys.appSKey) {
-            return 'Invalid keys';
-          }
-
-          const devEui = node.packet.getBuffers().DevEUI.toString('hex');
-          node.appSKey = keys.appSKey.toString('hex');
-          node.nwkSKey = keys.nwkSKey.toString('hex');
-          node.appKey = appKey;
-          nodes[devEui] = {...nodes[devEui], ...node};
-
-          const txpk = await loraWanHandler.buildPacket({
-            devAddr: utils.getRandomBytes(6).toString(),
-            devEui,
-            appEui: nodes[devEui].appEui,
-            mType: 'Join Accept',
-            ...networkOptions,
-            ...keys,
-            appKey,
-            //  payload
-          });
-          // todo find the closest gateway ?
-          return server.pullResp(
-            txpk,
-            {
-              h: Math.floor(Math.random() * 300),
-              l: Math.floor(Math.random() * 300),
-            },
-            {
-              address: message.gateway.address,
-              port: message.gateway.portdown,
-            },
-            message.gateway.id,
-          );
+          return buildJoinAccept(node, appKey);
         }
       } else if (node.nwkSKey && node.appSKey) {
         // todo switch based on messaging protocol used
@@ -428,55 +588,7 @@ const parseAppMessage = async (server, message) => {
         // or dynamically from the payload structure ?
         // if ( node.protocolName = "cayenneLPP") {
         // }
-        const {
-          decodedPacket,
-          cayennePayload,
-        } = await loraWanHandler.parseCayennePayload(
-          Buffer.from(node.packet, 'hex'),
-          node.appSKey,
-          node.nwkSKey,
-        );
-
-        const devAddr = decodedPacket.getBuffers().DevAddr.toString('hex');
-        node.protocolName = 'cayenneLPP';
-        node.packet = decodedPacket.getPHYPayload().toString('hex');
-        node.lastPush = decodedPacket.getPHYPayload().toString('hex');
-        node.cayennePayload = cayennePayload;
-        nodes[devAddr] = {...nodes[devAddr], ...node};
-        logger.publish(4, 'Lora-Server', 'onMessage:res :', nodes[devAddr]);
-        await loraWanApp.emit(message.direction, {
-          gateway: message.gateway,
-          type: mType,
-          direction: message.direction,
-          node: nodes[devAddr],
-        });
-
-        return cayennePayload.forEach(async sensor => {
-          if (sensor && sensor.nativeSensorId && sensor.type) {
-            const key = `sensor-${sensor.type}-${sensor.nativeSensorId}`;
-            if (!Object.prototype.hasOwnProperty.call(nodes[devAddr], key)) {
-              nodes[devAddr][key] = sensor;
-              return loraWanApp.emit(message.direction, {
-                gateway: message.gateway,
-                type: mType,
-                direction: message.direction,
-                sensor: nodes[devAddr][key],
-              });
-            }
-            nodes[devAddr][key] = {
-              // cayennePayload,
-              ...nodes[devAddr][key],
-              ...sensor,
-            };
-            return loraWanApp.emit(message.direction, {
-              gateway: message.gateway,
-              type: mType,
-              direction: message.direction,
-              sensor: nodes[devAddr][key],
-            });
-          }
-          return null;
-        });
+        return handleRXAppMessage(node);
       }
       return new Error('Error: device not authenticated');
     } else if (
@@ -484,52 +596,8 @@ const parseAppMessage = async (server, message) => {
       message.sensor.packet &&
       message.sensor.nativeSensorId
     ) {
-      const sensor = message.sensor;
-      const devAddr = sensor.packet.getBuffers().DevAddr.toString('hex');
-      //  const devEui = sensor.packet.getBuffers().DevEUI.toString('hex');
-      // fromWire(sensor.packet)
-
-      const key = `sensor-${sensor.type}-${sensor.nativeSensorId}`;
-      if (!Object.prototype.hasOwnProperty.call(nodes[devAddr], key)) {
-        return new Error("Error: sensor doesn't exist");
-      }
-      if (!nodes[devAddr].appSKey || !nodes[devAddr].nwkSKey) {
-        return new Error('Error: device not authenticated');
-      }
-
-      // todo switch based on messaging protocol used
-      // retrieve info from a property ?
-      // or dynamically from the payload structure ?
-      // if (sensor.protocolName === "cayenneLPP") {
-      // }
-      nodes[devAddr][key] = {
-        ...nodes[devAddr][key],
-        ...sensor,
-      };
-      const payload = await loraWanHandler.buildCayennePayload(sensor);
-      //  console.log('built payload', payload);
-
-      //  sensor.cayennePayload = payload;
-      const txpk = await loraWanHandler.buildPacket({
-        devAddr,
-        payload,
-        mType: 'Unconfirmed Data Down',
-        ...networkOptions,
-        nwkSKey: nodes[devAddr].nwkSKey,
-        appSKey: nodes[devAddr].appSKey,
-      });
-      return server.pullResp(
-        txpk,
-        {
-          h: Math.floor(Math.random() * 300),
-          l: Math.floor(Math.random() * 300),
-        },
-        {
-          address: message.gateway.address,
-          port: message.gateway.portdown,
-        },
-        message.gateway.id,
-      );
+      // UpdateSensor Instance
+      return handleTXAppMessage(message);
     }
     return new Error('Error: Invalid message');
   } catch (error) {
@@ -546,6 +614,7 @@ const setAppListeners = server => {
    * Event reporting that LoraWanApp has received MQTT packet.
    * @event module:loraWanApp~message
    * @param {object} message - MQTT packet.
+   * @returns {function} parseAppMessage
    */
   loraWanApp.on('message', async message => parseAppMessage(server, message));
   /**

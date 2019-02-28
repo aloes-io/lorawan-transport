@@ -23,7 +23,7 @@ LoraWan Proxy
     * [~setAppListeners(server)](#module_mqttBridge..setAppListeners)
     * [~init(config)](#module_mqttBridge..init)
     * ["message"](#module_mqttBridge..event_message)
-    * ["publish" (message)](#module_mqttBridge..event_publish)
+    * ["publish" (message)](#module_mqttBridge..event_publish) ⇒ <code>function</code>
     * ["close"](#module_mqttBridge..event_close)
     * ["init" (config)](#module_mqttBridge..event_init)
 
@@ -108,10 +108,11 @@ Event reporting that MQTT Client received a message.
 
 <a name="module_mqttBridge..event_publish"></a>
 
-### "publish" (message)
+### "publish" (message) ⇒ <code>function</code>
 Event reporting that mqttBridge has to proxy a message.
 
 **Kind**: event emitted by [<code>mqttBridge</code>](#module_mqttBridge)  
+**Returns**: <code>function</code> - parseAppMessage  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -144,7 +145,7 @@ MQTT.JS Client.
     * ["error" (error)](#module_mqttClient..event_error)
     * ["connect" (state)](#module_mqttClient..event_connect)
     * ["disconnect" (state)](#module_mqttClient..event_disconnect)
-    * ["message" (topic, message)](#module_mqttClient..event_message)
+    * ["message" (topic, message)](#module_mqttClient..event_message) ⇒ <code>function</code>
 
 <a name="module_mqttClient..event_error"></a>
 
@@ -178,8 +179,9 @@ MQTT.JS Client.
 
 <a name="module_mqttClient..event_message"></a>
 
-### "message" (topic, message)
+### "message" (topic, message) ⇒ <code>function</code>
 **Kind**: event emitted by [<code>mqttClient</code>](#module_mqttClient)  
+**Returns**: <code>function</code> - parseBrokerMessage  
 
 | Param | Type | Description |
 | --- | --- | --- |

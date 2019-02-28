@@ -128,6 +128,7 @@ const setBrokerListeners = client => {
    * @event module:mqttClient~message
    * @param {object} topic - MQTT Topic
    * @param {object} message - MQTT Payload
+   * @returns {function} parseBrokerMessage
    */
   client.on('message', async (topic, message) =>
     parseBrokerMessage(topic, message),
@@ -239,14 +240,15 @@ const parseAppMessage = async (client, message) => {
  * Listen to Application internal events
  * @param {object} server - LoraWan Server instance
  */
-
 const setAppListeners = client => {
   /**
    * Event reporting that mqttBridge has to proxy a message.
    * @event module:mqttBridge~publish
    * @param {object} message - LoraWan message.
+   * @returns {function} parseAppMessage
    */
   mqttBridge.on('publish', async message => parseAppMessage(client, message));
+  
   /**
    * Event reporting that mqttBridge has to close.
    * @event module:mqttBridge~close

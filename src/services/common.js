@@ -1,3 +1,26 @@
+/**
+ * Oma Object References.
+ * @external OmaObjects
+ * @see {@link https://api.aloes.io/api/omaObjects}
+ */
+
+/**
+ * Oma Resources References.
+ * @external OmaResources
+ * @see {@link https://api.aloes.io/api/omaResources}
+ */
+
+/**
+ * References used to validate payloads
+ * @namespace
+ * @property {string}  internalPattern        - The pattern used by LoraWAN controller.
+ * @property {string}  externalPattern        - The pattern used by MQTT bridge.
+ * @property {object}  validators             - Check inputs / build outputs
+ * @property {array}   validators.mTypes      - Used by LoraWAN Stack.
+ * @property {array}   validators.types       - Used by LoraWAN Stack.
+ * @property {array}   validators.collectionNames - Used to build AloesClient packet.
+ * @property {array}   validators.methods     - Used to build AloesClient packet.
+ */
 const protocolRef = {
   internalPattern: '+appEui/+gatewayId/+direction/+type',
   externalPattern: '+appEui/+collectionName/+method/+gatewayId',
@@ -15,8 +38,6 @@ const protocolRef = {
     ],
     directions: ['RX', 'TX'],
     types: [
-      'DECODED',
-      'ENCODED',
       'PUSH_DATA',
       'PULL_DATA',
       'PULL_RESP',

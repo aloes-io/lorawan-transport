@@ -18,6 +18,12 @@ Init Application config
 | Param | Type | Description |
 | --- | --- | --- |
 | config | <code>object</code> | Env variables |
+| config.brokerUrl | <code>string</code> | MQTT Broker URL |
+| config.mqtt | <code>object</code> | MQTT client config |
+| config.lorawan | <code>object</code> | LoraWan server config |
+| config.redis | <code>object</code> | Redis client config |
+| config.fileStore | <code>object</code> | FS path config |
+| [config.storage] | <code>string</code> | Storage type ( "inMemory", "inFile", "cacheStorage" ) |
 
 <a name="module_appConfig..event_done"></a>
 

@@ -10,16 +10,18 @@
     "docs:controller": "jsdoc2md ./src/services/lorawan-controller.js > ./docs/controller/README.md",
     "docs:handler": "jsdoc2md ./src/services/lorawan-handler.js > ./docs/handler/README.md",
     "docs:bridge": "jsdoc2md ./src/services/mqtt-bridge.js > ./docs/bridge/README.md",
+    "docs:cache": "jsdoc2md ./src/services/cache-store.js > ./docs/cache/README.md",
+    "docs:file": "jsdoc2md ./src/services/file-store.js > ./docs/file/README.md",
     "docs:config": "jsdoc2md ./src/config.js > ./docs/config/README.md",
     "docs:app": "jsdoc2md ./src/index.js > ./docs/app/README.md",
-    "docs:md": "npm run docs:app ; npm run docs:config ; npm run docs:common ; npm run docs:server ; npm run docs:controller ;  npm run docs:handler ; npm run docs:bridge",
+    "docs:md": "npm run docs:app ; npm run docs:config ; npm run docs:common ; npm run docs:server ; npm run docs:cache ; npm run docs:file ; npm run docs:controller ;  npm run docs:handler ; npm run docs:bridge",
     "docs:dev": "npm run docs:md ; cp ./README.md ./docs/readme/. ; vuepress dev docs",
     "docs:build": "npm run docs:md ; cp ./README.md ./docs/readme/. ; vuepress build docs",
     "docs:serve": "light-server -s public -p 7000 --servePrefix /lorawan-transport/",
     "start": "babel-node ./src/index.js",
-    "start:dev": "cp deploy/.env_dev .env && NODE_ENV=development nodemon --exec babel-node ./src/index.js",
-    "start:local": "cp deploy/.env_local .env && NODE_ENV=local nodemon --exec babel-node ./src/index.js",
-    "start:stage": "cp deploy/.env_staging .env && NODE_ENV=staging nodemon --exec babel-node ./src/index.js",
+    "start:dev": "cp deploy/.env_dev .env && NODE_ENV=development nodemon --exec babel-node ./src/index.js --ignore 'src/store/*.json'",
+    "start:local": "cp deploy/.env_local .env && NODE_ENV=local nodemon --exec babel-node ./src/index.js --ignore 'src/store/*.*'",
+    "start:stage": "cp deploy/.env_staging .env && NODE_ENV=staging nodemon  --ignore 'src/store/*' --exec babel-node ./src/index.js",
     "deploy:stage": "pm2 startOrRestart ecosystem.config.js --env staging --update-env",
     "deploy:prod": "pm2 startOrRestart ecosystem.config.js --env production --update-env"
   },
@@ -35,21 +37,19 @@
     "npm": ">=6.0.0"
   },
   "dependencies": {
-    "aloes-handlers": "^1.1.5",
+    "aloes-handlers": "^1.1.6",
     "async-mqtt": "^2.0.0",
-    "buffer-reverse": "^1.0.1",
     "colors": "^1.3.3",
-    "crypto-js": "^3.1.9-1",
     "dotenv": "^6.2.0",
-    "lodash": "^4.17.11",
     "lora-packet": "^0.7.7",
     "mqtt-pattern": "^1.2.0",
-    "node-aes-cmac": "^0.1.1",
-    "oma-json": "^1.0.5"
+    "oma-json": "^1.0.5",
+    "redis": "^2.8.0",
+    "redis-delete-pattern": "^0.1.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.0.0",
-    "@babel/core": "^7.2.2",
+    "@babel/core": "^7.3.4",
     "@babel/node": "^7.0.0",
     "@babel/plugin-proposal-class-properties": "^7.0.0",
     "@babel/plugin-proposal-decorators": "^7.0.0",
@@ -136,6 +136,7 @@
   "eslintIgnore": [
     "/dist/",
     "/public/",
+    "/docs/",
     "/node_modules/"
   ],
   "repository": {

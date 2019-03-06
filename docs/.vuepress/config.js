@@ -20,6 +20,8 @@ module.exports = {
 			['/controller/', 'LoRaWAN Controller'],
 			['/handler/', 'LoRaWAN Handler'],
 			['/bridge/', 'MQTT Bridge'],
+			['/cache/', 'Cache Store'],
+			['/file/', 'File Store'],
 		],
 		serviceWorker: {
 			updatePopup: true, // Boolean | Object, default to undefined.

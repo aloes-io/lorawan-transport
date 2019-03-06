@@ -3,8 +3,9 @@ import colors from 'colors';
 
 colors.setTheme({
   LORA_SERVER: ['green', 'bold'],
-  LORA_DECODER: ['yellow', 'bold'],
+  LORA_HANDLER: ['yellow', 'bold'],
   MQTT_BRIDGE: ['blue', 'bold'],
+  CACHE_STORE: ['white', 'bold', 'bgGreen'],
   CONFIG: ['white', 'bold', 'bgBlue'],
   DEFAULT: 'white',
   warn: 'yellow',
@@ -38,11 +39,14 @@ logger.publish = (priority, collectionName, command, content) => {
       case 'LORA-SERVER':
         console.log(`${fullContent}`.LORA_SERVER);
         break;
-      case 'LORA-DECODER':
-        console.log(`${fullContent}`.LORA_DECODER);
+      case 'LORA-HANDLER':
+        console.log(`${fullContent}`.LORA_HANDLER);
         break;
       case 'MQTT-BRIDGE':
         console.log(`${fullContent}`.MQTT_BRIDGE);
+        break;
+      case 'CACHE-STORE':
+        console.log(`${fullContent}`.CACHE_STORE);
         break;
       default:
         console.log(`${fullContent}`.DEFAULT);

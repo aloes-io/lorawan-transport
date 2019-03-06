@@ -32,14 +32,32 @@ const send = message => {
  */
 const parseBrokerMessage = (topic, message) => {
   try {
+    logger.publish(4, 'mqtt-bridge', 'parseBrokerMessage:res', {
+      topic,
+    });
     let aloesClientRoute = null;
-    if (mqttPattern.matches(protocolRef.externalPattern, topic)) {
-      aloesClientRoute = mqttPattern.exec(protocolRef.externalPattern, topic);
-      logger(4, 'mqtt-bridge', 'aloesClientRoute:res', aloesClientRoute);
+    if (mqttPattern.matches(protocolRef.externalCollectionPattern, topic)) {
+      aloesClientRoute = mqttPattern.exec(
+        protocolRef.externalCollectionPattern,
+        topic,
+      );
+    } else if (
+      mqttPattern.matches(protocolRef.externalInstancePattern, topic)
+    ) {
+      aloesClientRoute = mqttPattern.exec(
+        protocolRef.externalInstancePattern,
+        topic,
+      );
     }
-    if (aloesClientRoute === null) {
+    if (!aloesClientRoute || aloesClientRoute === null) {
       return new Error('Error: Invalid pattern');
     }
+    logger.publish(
+      4,
+      'mqtt-bridge',
+      'parseBrokerMessage:res',
+      aloesClientRoute,
+    );
     if (aloesClientRoute.appEui !== mqttBridge.username) {
       return new Error('Error: Invalid app Id');
     }
@@ -49,33 +67,33 @@ const parseBrokerMessage = (topic, message) => {
     const collectionNameExists = protocolRef.validators.collectionNames.some(
       name => name === aloesClientRoute.collectionName,
     );
-    logger(4, 'mqtt-bridge', 'aloesClientRoute:res', {
+    logger.publish(4, 'mqtt-bridge', 'parseBrokerMessage:res', {
       methodExists,
       collectionNameExists,
     });
     if (methodExists && collectionNameExists) {
       message = JSON.parse(message);
+
       if (message.gateway && message.direction && message.type) {
-        switch (aloesClientRoute.collectionName.toLowerCase()) {
-          case 'application':
-            message = {...message};
-            break;
-          case 'device':
-            message = {...message};
-            break;
-          case 'sensor':
-            if (!message.sensor) {
-              return new Error('Error: No sensor instance');
-            }
-            message = {...message};
-            break;
-          default:
-            return new Error('Error: Comment est-ce possible?');
-        }
+        // switch (aloesClientRoute.collectionName.toLowerCase()) {
+        //   case 'application':
+        //     message = {...message};
+        //     break;
+        //   case 'device':
+        //     message = {...message};
+        //     break;
+        //   case 'sensor':
+        //     if (!message.sensor) {
+        //       return new Error('Error: No sensor instance');
+        //     }
+        //     message = {...message};
+        //     break;
+        //   default:
+        //     return new Error('Error: Comment est-ce possible?');
+        // }
         // read packet.mType ?
 
-        send(message);
-        return aloesClientRoute;
+        return send(message);
       }
       return new Error('Error: Invalid message');
     }
@@ -108,9 +126,10 @@ const setBrokerListeners = client => {
     mqttBridge.emit('status', state);
     mqttBridge.username = client._client.options.username;
     mqttBridge.connected = true;
-    if (client && mqttBridge.username) {
-      await client.subscribe(`${mqttBridge.username}/+/+/+`);
+    if (mqttBridge.username) {
+      await client.subscribe(`${mqttBridge.username}/IoTAgent/#`);
     }
+    return mqttBridge;
   });
 
   /**
@@ -136,7 +155,7 @@ const setBrokerListeners = client => {
 };
 
 /**
- * Parse internal application messages
+ * Parse internal application messages coming from LoraWan-Controller
  * @param {object} client - MQTT client instance
  * @param {object} message - Raw MQTT payload
  */
@@ -148,16 +167,28 @@ const parseAppMessage = async (client, message) => {
     if (!message || !message.gateway || !message.direction || !message.type) {
       return new Error('Error: invalid message');
     }
-    logger.publish(4, 'mqtt-bridge', 'publish:req', message.gateway);
-    let payload = null;
+    let payload;
+    let patternName = protocolRef.externalPattern;
     const params = {
       appEui: mqttBridge.username,
       gatewayId: message.gateway.mac,
       collectionName: null,
       method: null,
     };
+
     if (message.payload) {
+      logger.publish(4, 'mqtt-bridge', 'publish:req', {
+        payload: message.payload,
+      });
       params.collectionName = 'Device';
+      if (message.gateway.id) {
+        params.method = 'PUT';
+        params.modelId = message.gateway.id;
+        patternName = protocolRef.externalInstancePattern;
+      } else {
+        params.method = 'POST';
+        patternName = protocolRef.externalCollectionPattern;
+      }
       payload = JSON.stringify({
         gateway: message.gateway,
         packet: message.payload,
@@ -165,6 +196,7 @@ const parseAppMessage = async (client, message) => {
         type: message.type,
       });
     } else if (message.node) {
+      logger.publish(4, 'mqtt-bridge', 'publish:req', {node: message.node});
       const node = message.node;
       params.collectionName = 'Device';
       if (node.auth === 'ABP') {
@@ -172,8 +204,12 @@ const parseAppMessage = async (client, message) => {
           params.method = 'HEAD';
         } else if (node.id) {
           params.method = 'PUT';
+          params.modelId = node.id;
+          patternName = protocolRef.externalInstancePattern;
         } else {
           params.method = 'POST';
+          patternName = protocolRef.externalCollectionPattern;
+          patternName = protocolRef.externalCollectionPattern;
         }
         payload = JSON.stringify({
           gateway: message.gateway,
@@ -182,16 +218,15 @@ const parseAppMessage = async (client, message) => {
           type: message.type,
         });
       } else if (node.auth === 'OTAA') {
-        if (
-          !node.appKey ||
-          node.packet.getMType().toString('hex') === 'Join Request'
-        ) {
+        if (!node.appKey || !node.appSKey || !node.nwkSKey) {
           params.method = 'HEAD';
-          return 'auth request';
         } else if (node.id) {
           params.method = 'PUT';
+          params.modelId = node.id;
+          patternName = protocolRef.externalInstancePattern;
         } else {
           params.method = 'POST';
+          patternName = protocolRef.externalCollectionPattern;
         }
         payload = JSON.stringify({
           gateway: message.gateway,
@@ -201,11 +236,15 @@ const parseAppMessage = async (client, message) => {
         });
       }
     } else if (message.sensor) {
+      logger.publish(4, 'mqtt-bridge', 'publish:req', {sensor: message.sensor});
       params.collectionName = 'Sensor';
       if (message.sensor.id) {
+        params.modelId = message.sensor.id;
         params.method = 'PUT';
+        patternName = protocolRef.externalInstancePattern;
       } else {
         params.method = 'POST';
+        patternName = protocolRef.externalCollectionPattern;
       }
       payload = JSON.stringify({
         gateway: message.gateway,
@@ -214,22 +253,14 @@ const parseAppMessage = async (client, message) => {
         type: message.type,
       });
     }
-    if (
-      params.collectionName === null ||
-      params.method === null ||
-      payload === null
-    ) {
+    if (params.collectionName === null || params.method === null || !payload) {
       return new Error('Error: invalid message');
     }
-
-    //  console.log('publish', params);
-    // if (params.method === 'PUT') {
-    //   topic = mqttPattern.fill(protocolRef.externalPattern, params);
-    // }
-    const topic = mqttPattern.fill(protocolRef.externalPattern, params);
+    //  const topic = mqttPattern.fill(protocolRef.externalPattern, params);
+    const topic = mqttPattern.fill(patternName, params);
     logger.publish(4, 'mqtt-bridge', 'publish:res', {topic});
     await client.publish(topic, payload, {qos: 0});
-    return null;
+    return {topic, payload};
   } catch (error) {
     logger.publish(4, 'mqtt-bridge', 'publish:err', error);
     return error;
@@ -248,7 +279,7 @@ const setAppListeners = client => {
    * @returns {function} parseAppMessage
    */
   mqttBridge.on('publish', async message => parseAppMessage(client, message));
-  
+
   /**
    * Event reporting that mqttBridge has to close.
    * @event module:mqttBridge~close
@@ -262,17 +293,28 @@ const setAppListeners = client => {
 
 /**
  * Init MQTT Bridge
- * @param {object} config - Env variables
+ * @param {object} config - Formatted configuration variables
+ * @param {string} config.brokerUrl - Remote MQTT broker
+ * @param {string} config.mqtt.clientId - Unique client Id
+ * @param {string} config.mqtt.username - Application Id
+ * @param {object} config.mqtt.password - Password, aka API key
+ * @returns {object} mqttClient
  */
-const init = config => {
-  logger.publish(3, 'mqtt-bridge', 'init', config.mqtt);
-  /**
-   * MQTT.JS Client.
-   * @module mqttClient
-   */
-  const mqttClient = mqtt.connect(config.brokerUrl, config.mqtt);
-  setBrokerListeners(mqttClient);
-  setAppListeners(mqttClient);
+const init = async config => {
+  try {
+    logger.publish(3, 'mqtt-bridge', 'init:req', config.mqtt);
+    /**
+     * MQTT.JS Client.
+     * @module mqttClient
+     */
+    const mqttClient = mqtt.connect(config.brokerUrl, config.mqtt);
+    setBrokerListeners(mqttClient);
+    setAppListeners(mqttClient);
+    return mqttClient;
+  } catch (error) {
+    logger.publish(3, 'mqtt-bridge', 'init:err', error);
+    return error;
+  }
 };
 
 /**
@@ -280,6 +322,7 @@ const init = config => {
  * @event module:mqttBridge~init
  * @param {object} config - Formatted config.
  */
-mqttBridge.on('init', config => {
-  init(config);
+mqttBridge.on('init', async config => {
+  const client = await init(config);
+  return mqttBridge.emit('done', client);
 });

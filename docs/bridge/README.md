@@ -21,7 +21,7 @@ LoraWan Proxy
     * [~setBrokerListeners(client)](#module_mqttBridge..setBrokerListeners)
     * [~parseAppMessage(client, message)](#module_mqttBridge..parseAppMessage)
     * [~setAppListeners(server)](#module_mqttBridge..setAppListeners)
-    * [~init(config)](#module_mqttBridge..init)
+    * [~init(config)](#module_mqttBridge..init) ⇒ <code>object</code>
     * ["message"](#module_mqttBridge..event_message)
     * ["publish" (message)](#module_mqttBridge..event_publish) ⇒ <code>function</code>
     * ["close"](#module_mqttBridge..event_close)
@@ -63,7 +63,7 @@ Listen to MQTT Client events
 <a name="module_mqttBridge..parseAppMessage"></a>
 
 ### mqttBridge~parseAppMessage(client, message)
-Parse internal application messages
+Parse internal application messages coming from LoraWan-Controller
 
 **Kind**: inner method of [<code>mqttBridge</code>](#module_mqttBridge)  
 
@@ -85,14 +85,19 @@ Listen to Application internal events
 
 <a name="module_mqttBridge..init"></a>
 
-### mqttBridge~init(config)
+### mqttBridge~init(config) ⇒ <code>object</code>
 Init MQTT Bridge
 
 **Kind**: inner method of [<code>mqttBridge</code>](#module_mqttBridge)  
+**Returns**: <code>object</code> - mqttClient  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| config | <code>object</code> | Env variables |
+| config | <code>object</code> | Formatted configuration variables |
+| config.brokerUrl | <code>string</code> | Remote MQTT broker |
+| config.mqtt.clientId | <code>string</code> | Unique client Id |
+| config.mqtt.username | <code>string</code> | Application Id |
+| config.mqtt.password | <code>object</code> | Password, aka API key |
 
 <a name="module_mqttBridge..event_message"></a>
 

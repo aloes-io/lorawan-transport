@@ -24,6 +24,8 @@
 const protocolRef = {
   internalPattern: '+appEui/+gatewayId/+direction/+type',
   externalPattern: '+appEui/+collectionName/+method/+gatewayId',
+  externalCollectionPattern: '+appEui/+collectionName/+method',
+  externalInstancePattern: '+appEui/+collectionName/+method/+modelId',
   validators: {
     appEui: 'string',
     mTypes: [

@@ -1,0 +1,20 @@
+{
+    "23299492": {
+        "id": null,
+        "mac": "23299492",
+        "transportProtocol": "test",
+        "protocolVersion": "0",
+        "latitude": "",
+        "longitude": ""
+    },
+    "b827ebfffe6cc78d": {
+        "mac": "b827ebfffe6cc78d",
+        "transportProtocol": "loraWan",
+        "protocolVersion": 2,
+        "portup": 37855,
+        "address": "192.168.1.92",
+        "latitude": "",
+        "longitude": "",
+        "portdown": 54921
+    }
+}

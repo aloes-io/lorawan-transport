@@ -1,0 +1,75 @@
+{
+  "234243242": {
+    "id": null,
+    "auth": "OTAA",
+    "transportProtocol": "",
+    "protocolVersion": "",
+    "packet": null,
+    "gwId": "23299492",
+    "devEui": "234243242",
+    "sensor-3200-0": {
+      "id": null,
+      "packet": null,
+      "transportProtocol": "loraWan",
+      "messageProtocol": "cayenneLPP",
+      "protocolVersion": "",
+      "name": "Digital output",
+      "icons": [],
+      "colors": null,
+      "nativeType": 0,
+      "nativeResource": 5500,
+      "nativeSensorId": 0,
+      "type": 3200,
+      "resources": {
+        "5500": 0,
+        "5501": 1
+      },
+      "resource": 5500,
+      "value": 0,
+      "frameCounter": 0
+    }
+  },
+  "03ff0001": {
+    "auth": "ABP",
+    "transportProtocol": "loraWan",
+    "protocolVersion": "1",
+    "messageProtocol": "cayenneLPP",
+    "gwId": "b827ebfffe6cc78d",
+    "devAddr": "03ff0001",
+    "type": "Unconfirmed Data Up",
+    "packet": "QAEA/wMANQIB4qKMi1VVQg==",
+    "lastPush": "400100ff0300350201e2a28c8b555542",
+    "lastSignal": "2019-03-05T16:12:12.502Z",
+    "frameCounter": 565,
+    "id": "5c7d427dbafbad197cb232d4",
+    "appSKey": "2B7E151628AED2A6ABF7158809CF4F3C",
+    "nwkSKey": "2B7E151628AED2A6ABF7158809CF4F3C",
+    "decoded": {
+      "type": "Buffer",
+      "data": [1, 0, 0]
+    },
+    "sensor-3200-0": {
+      "packet": "010000",
+      "nativeType": "0",
+      "nativeResource": "5500",
+      "nativeSensorId": 0,
+      "type": 3200,
+      "devAddr": "03ff0001",
+      "resources": {
+        "5500": 0,
+        "5501": 0,
+        "5502": 1,
+        "5503": 0,
+        "5504": 1,
+        "5505": 1,
+        "5750": "app_name",
+        "5751": "sensor_name"
+      },
+      "resource": "5500",
+      "value": 0,
+      "deviceId": "5c7d427dbafbad197cb232d4",
+      "transportProtocol": "loraWan",
+      "messageProtocol": "cayenneLPP"
+    }
+  }
+}

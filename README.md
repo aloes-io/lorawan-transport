@@ -13,8 +13,8 @@ LoraWan MQTT API build upon :
 - [LoraWAN Server](https://github.com/ioberry/LoraWAN-Server)
 - [Lora-Packet](https://github.com/anthonykirby/lora-packet)
 - [MQTT.js](https://github.com/mqttjs)
-- [Aloes handlers](https://www.npmjs.com/package/aloes-handlers)
-- [Device manager](https://framagit.org/getlarge/device-manager)
+- [Aloes handlers](https://framagit.org/aloes/aloes-handlers)
+- [Device manager](https://framagit.org/aloes/device-manager)
 
 ---
 
@@ -23,6 +23,8 @@ LoraWan MQTT API build upon :
 - /. --> Main application configuration, dependencies list, and launch scripts
 
 - /deploy --> contains environment variables ( hidden files )
+
+- /docs --> contains static site assets and configuration ( JSDoc & Vuepress)
 
 - /log --> contains logs from PM2
 
@@ -49,7 +51,20 @@ You can override these by populating `deploy` with files corresponding to an env
 ## Running the development server (REST API)
 
 ```bash
-  $ npm run dev
+  $ npm run start:dev
+```
+
+## Generate documentation
+
+With JSDoc and Vuepress
+
+```bash
+$ npm run docs:dev
+```
+
+```bash
+$ npm run docs:build
+$ npm run docs:serve
 ```
 
 ## Deploying project
@@ -57,7 +72,7 @@ You can override these by populating `deploy` with files corresponding to an env
 Please remember to update `.env` and / or `ecosystem.config.json` files to match your enviroment.
 
 ```bash
-  $ npm run start
+  $ npm run deploy:prod
 ```
 
 ### You can also launch this app with pm2 :

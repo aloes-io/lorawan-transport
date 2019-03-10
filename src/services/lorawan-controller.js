@@ -562,27 +562,30 @@ const handleRXAppMessage = async (server, message) => {
 const handleTXAppMessage = async (server, message) => {
   try {
     logger.publish(4, 'Lora-Server', 'handleTXAppMessage:req', {message});
-    const sensor = message.sensor;
-    const devAddr = sensor.packet.getBuffers().DevAddr.toString('hex');
-    //  const devEui = sensor.packet.getBuffers().DevEUI.toString('hex');
 
-    const key = `sensor-${sensor.type}-${sensor.nativeSensorId}`;
-    if (!Object.prototype.hasOwnProperty.call(state.nodes[devAddr], key)) {
-      return new Error("Error: sensor doesn't exist");
+    if (message.sensor) {
+      const sensor = message.sensor;
+      const devAddr = sensor.packet.getBuffers().DevAddr.toString('hex');
+      const devEui = sensor.packet.getBuffers().DevEUI.toString('hex');
+      const key = `sensor-${sensor.type}-${sensor.nativeSensorId}`;
+      if (!Object.prototype.hasOwnProperty.call(state.nodes[devAddr], key)) {
+        return new Error("Error: sensor doesn't exist");
+      }
+      if (!state.nodes[devAddr].appSKey || !state.nodes[devAddr].nwkSKey) {
+        return new Error('Error: device not authenticated');
+      }
+      if (devEui && devEui !== null) {
+        state.nodes[devEui][key] = {
+          ...state.nodes[devEui][key],
+          ...sensor,
+        };
+      } else {
+        state.nodes[devAddr][key] = {
+          ...state.nodes[devAddr][key],
+          ...sensor,
+        };
+      }
     }
-    if (!state.nodes[devAddr].appSKey || !state.nodes[devAddr].nwkSKey) {
-      return new Error('Error: device not authenticated');
-    }
-
-    // todo switch based on messaging protocol used
-    // retrieve info from a property ?
-    // or dynamically from the payload structure ?
-    // if (sensor.transportProtocol === "cayenneLPP") {
-    // }
-    state.nodes[devAddr][key] = {
-      ...state.nodes[devAddr][key],
-      ...sensor,
-    };
 
     if (
       sensor.messageProtocol &&

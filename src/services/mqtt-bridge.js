@@ -91,8 +91,6 @@ const parseBrokerMessage = (topic, message) => {
         //   default:
         //     return new Error('Error: Comment est-ce possible?');
         // }
-        // read packet.mType ?
-
         return send(message);
       }
       return new Error('Error: Invalid message');
@@ -202,13 +200,13 @@ const parseAppMessage = async (client, message) => {
       if (node.auth === 'ABP') {
         if (!node.appSKey || !node.nwkSKey) {
           params.method = 'HEAD';
+          patternName = protocolRef.externalCollectionPattern;
         } else if (node.id) {
           params.method = 'PUT';
           params.modelId = node.id;
           patternName = protocolRef.externalInstancePattern;
         } else {
           params.method = 'POST';
-          patternName = protocolRef.externalCollectionPattern;
           patternName = protocolRef.externalCollectionPattern;
         }
         payload = JSON.stringify({
@@ -220,6 +218,7 @@ const parseAppMessage = async (client, message) => {
       } else if (node.auth === 'OTAA') {
         if (!node.appKey || !node.appSKey || !node.nwkSKey) {
           params.method = 'HEAD';
+          patternName = protocolRef.externalCollectionPattern;
         } else if (node.id) {
           params.method = 'PUT';
           params.modelId = node.id;

@@ -1,5 +1,5 @@
 import loraPacket from 'lora-packet';
-import {cayenneDecoder, cayenneEncoder} from 'aloes-handlers';
+import {cayenneDecoder, cayenneEncoder} from 'cayennelpp-handlers';
 //  import {promisify} from 'util';
 import logger from './logger';
 import utils from './utils';

@@ -4,6 +4,7 @@
 - Authentification by OTAA and ABP via Aloes device-manager
 - MQTT flow triggered by LoraWan server events
 - Decode payload received/sent with CayenneLPP
+- Store Gateways and Devices state 
 
 [Full Docs](https://aloes.frama.io/lorawan-transport/)
 
@@ -71,12 +72,6 @@ $ npm run docs:serve
 
 Please remember to update `.env` and / or `ecosystem.config.json` files to match your enviroment.
 
-```bash
-  $ npm run deploy:prod
-```
-
-### You can also launch this app with pm2 :
-
 - Access to server with SSH :
 
 ```bash
@@ -87,13 +82,13 @@ Please remember to update `.env` and / or `ecosystem.config.json` files to match
 - Creating environment :
 
 ```bash
-  $ pm2 deploy ecosystem.config.js production setup
+  $ npm run setup:prod
 ```
 
 - Updating environment :
 
 ```bash
-  $ pm2 deploy ecosystem.config.js production update
+  $ npm run update:prod
 ```
 
 Be sure to commit your changes on the right branch before each setup and update: ( master for production env, and staging for dev/staging env )

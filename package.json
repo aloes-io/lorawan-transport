@@ -22,6 +22,10 @@
     "start:dev": "cp deploy/.env_dev .env && NODE_ENV=development nodemon --exec babel-node ./src/index.js --ignore 'src/store/*.json'",
     "start:local": "cp deploy/.env_local .env && NODE_ENV=local nodemon --exec babel-node ./src/index.js --ignore 'src/store/*.*'",
     "start:stage": "cp deploy/.env_staging .env && NODE_ENV=staging nodemon  --ignore 'src/store/*' --exec babel-node ./src/index.js",
+    "setup:stage": "pm2 deploy ecosystem.config.js staging setup",
+    "setup:prod": "pm2 deploy ecosystem.config.js production setup",
+    "update:stage": "pm2 deploy ecosystem.config.js staging update",
+    "update:prod": "pm2 deploy ecosystem.config.js production update",
     "deploy:stage": "pm2 startOrRestart ecosystem.config.js --env staging --update-env",
     "deploy:prod": "pm2 startOrRestart ecosystem.config.js --env production --update-env"
   },
@@ -37,15 +41,14 @@
     "npm": ">=6.0.0"
   },
   "dependencies": {
-    "aloes-handlers": "^1.1.6",
     "async-mqtt": "^2.0.0",
+    "cayennelpp-handlers": "^1.0.0",
     "colors": "^1.3.3",
     "dotenv": "^6.2.0",
     "lora-packet": "^0.7.7",
     "mqtt-pattern": "^1.2.0",
     "oma-json": "^1.0.5",
-    "redis": "^2.8.0",
-    "redis-delete-pattern": "^0.1.0"
+    "redis": "^2.8.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.0.0",
@@ -76,7 +79,7 @@
     "mocha": "^5.2.0",
     "nodemon": "^1.18.8",
     "prettier": "1.16.1",
-    "vuepress": "^0.14.9"
+    "vuepress": "^1.0.0-alpha.42"
   },
   "babel": {
     "presets": [

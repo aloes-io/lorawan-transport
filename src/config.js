@@ -43,9 +43,10 @@ const init = envVariables => {
       address: envVariables.LORA_SERVER_HOST,
     },
     redis: {
-      db: process.env.REDIS_COLLECTION || '4',
+      db: process.env.REDIS_COLLECTION.toString() || '4',
       host: process.env.REDIS_HOST || 'localhost',
       port: Number(process.env.REDIS_PORT) || 6379,
+      password: process.env.REDIS_PASS,
     },
     fileStore: {
       gateways: path.join(__dirname, 'store/gateways-store.json'),

@@ -135,6 +135,12 @@ cacheStore.init = conf => {
     port: conf.redis.port,
     db: conf.redis.db,
   });
+  if (conf.redis.password) {
+    redisClient.auth(conf.redis.password, err => {
+      if (err) throw err;
+    });
+  }
+
   /**
    * @method module:redisClient.hgetAsync
    * @params {string} model - Cache reference
